@@ -23,7 +23,7 @@
 ### 方式一：从 GitHub 克隆（推荐）
 
 ```powershell
-git clone <仓库地址> dsh-highlighter
+git clone https://github.com/misterbig5222-oss/dsh-highlighter.git
 cd dsh-highlighter
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
