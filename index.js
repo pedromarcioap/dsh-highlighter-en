@@ -1,12 +1,12 @@
-/* dsh-highlighter — node half（host 侧占位插件）
+/* dsh-highlighter — Node half (host-side placeholder plugin)
  *
- * 功能全部在浏览器半实现。host 侧 loader 需要一个存活 fiber，
- * client-modules 才会把该 entry 的 dsh.client bundle 扫进 boot 图；
- * 因此这里提供一个不注册任何东西的空插件，保证 entry 正常激活。
+ * All features are implemented on the browser side. The host-side loader requires a live fiber
+ * so that client-modules scans this entry's dsh.client bundle into the boot graph;
+ * therefore, an empty plugin registering nothing is provided here to ensure the entry activates normally.
  */
 export default {
 	apply(ctx) {
-		// 无 host 侧贡献：高亮、想法、标签、圆标定位全部在页面内完成。
+		// No host-side contribution: highlights, notes, tags, and dot navigation are all handled inside the page.
 		void ctx;
 	}
 };

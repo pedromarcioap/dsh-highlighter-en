@@ -1,7 +1,7 @@
 {
   "name": "dsh-highlighter",
   "version": "1.0.0",
-  "description": "DeepSeek Harness 高亮标注插件：选中文字高亮（8 种经典颜色）、写想法、打标签、快速复制/删除，右侧圆标按上下文位置定位",
+  "description": "DeepSeek Harness highlight and annotation plugin: select text to highlight (8 classic colors), add notes, tags, quick copy/delete, and navigate via right-side context-positioned dots",
   "private": true,
   "type": "module",
   "main": "index.js",

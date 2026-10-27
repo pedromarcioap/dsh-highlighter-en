@@ -1,16 +1,16 @@
-/* dsh-highlighter — 浏览器半（client bundle）
+/* dsh-highlighter — Browser side (client bundle)
  *
- * DeepSeek Harness 页面内高亮标注插件：
- *   - 选中文字 -> 浮动工具栏（3 个快捷色 + 调色板 8 色 + 标签 + 复制）
- *   - 点击已高亮文字 -> 管理工具栏（换色 / 写想法 / 打标签 / 复制 / 删除）
- *   - 右侧圆标条：每条高亮一个圆标，颜色与高亮一致；
- *     圆标按「文档上下文位置」从上到下排列（上面标注的在上、下面标注的在下），
- *     且圆标纵向位置按内容高度比例映射，点击圆标滚动定位并闪烁该高亮。
- *   - 记录持久化在 localStorage（dshhl_highlights），React 重渲染后按
- *     文本 + 前后文重新锚定（MutationObserver）。
+ * DeepSeek Harness in-page text highlight & annotation plugin:
+ *   - Select text -> Floating toolbar (3 quick colors + 8-color palette + tag + copy)
+ *   - Click highlighted text -> Management toolbar (change color / write note / add tag / copy / delete)
+ *   - Right-side dot rail: one dot per highlight, matching the highlight color;
+ *     dots are arranged from top to bottom by document context position (higher highlights on top, lower below),
+ *     with vertical position proportionally mapped to content height. Click dot to smoothly scroll and flash highlight.
+ *   - Persistence in localStorage (dshhl_highlights), re-anchored across React re-renders
+ *     via text + surrounding context matching (MutationObserver).
  *
- * 打包格式：window.__ModuleLoader__.load({ id, factory })，
- * factory 返回 Cordis 插件 { apply, inject }。
+ * Bundle format: window.__ModuleLoader__.load({ id, factory }),
+ * factory returns Cordis plugin { apply, inject }.
  */
 window.__ModuleLoader__.load({
 	id: "dsh-highlighter",
@@ -21,10 +21,10 @@ window.__ModuleLoader__.load({
 
 		const INSTANCE_VERSION = "1.0.0";
 		const STORE_KEY = "dshhl_highlights";
-		const CLASS = "dsh-hl"; // 高亮 span 类名
-		const ID_ATTR = "data-dsh-id"; // 高亮 span 上的记录 id
+		const CLASS = "dsh-hl"; // Highlight span class name
+		const ID_ATTR = "data-dsh-id"; // Record ID attribute on highlight span
 
-		// 8 种经典高亮色（6~10 之间取 8）
+		// 8 classic highlight colors
 		const COLORS = {
 			red: "#F6A6A6",
 			orange: "#FFCC80",
@@ -36,11 +36,11 @@ window.__ModuleLoader__.load({
 			pink: "#FFB3DE"
 		};
 		const COLOR_NAMES = {
-			red: "红", orange: "橙", yellow: "黄", green: "绿",
-			teal: "青", blue: "蓝", purple: "紫", pink: "粉"
+			red: "Red", orange: "Orange", yellow: "Yellow", green: "Green",
+			teal: "Teal", blue: "Blue", purple: "Purple", pink: "Pink"
 		};
-		const QUICK = ["red", "yellow", "blue"]; // 选中后的 3 个快捷色
-		const DEFAULT_COLOR = "yellow"; // 选区工具栏「标签」默认先按此色高亮
+		const QUICK = ["red", "yellow", "blue"]; // 3 quick colors on selection
+		const DEFAULT_COLOR = "yellow"; // Default color when tagging an unhighlighted selection
 
 		if (window.__dshHighlighterLoaded && window.__dshHighlighterVersion === INSTANCE_VERSION) {
 			exports.apply = () => {};
@@ -50,7 +50,7 @@ window.__ModuleLoader__.load({
 		window.__dshHighlighterLoaded = true;
 		window.__dshHighlighterVersion = INSTANCE_VERSION;
 
-		/* ── 生命周期与计时器登记 ─────────────────────────────── */
+		/* ── Lifecycle & Timer Registry ──────────────────────── */
 		const timers = new Set();
 		function later(fn, ms) {
 			const t = setTimeout(() => { timers.delete(t); fn(); }, ms);
@@ -58,7 +58,7 @@ window.__ModuleLoader__.load({
 			return t;
 		}
 
-		/* ── 存储 ─────────────────────────────────────────────── */
+		/* ── Storage ─────────────────────────────────────────── */
 		const store = new Map();
 		let seq = 0;
 		const uid = () => "h" + Date.now().toString(36) + (seq++).toString(36);
@@ -69,7 +69,7 @@ window.__ModuleLoader__.load({
 			saveTimer = setTimeout(() => {
 				try {
 					localStorage.setItem(STORE_KEY, JSON.stringify([...store.values()]));
-				} catch (e) { /* 存储不可用时静默降级为仅内存 */ }
+				} catch (e) { /* Silently fallback to memory-only when storage is unavailable */ }
 			}, 200);
 		}
 		function loadRecords() {
@@ -80,7 +80,7 @@ window.__ModuleLoader__.load({
 			} catch (e) { return []; }
 		}
 
-		/* ── 页面级样式与 UI host（Shadow DOM 隔离 DSH 样式） ─── */
+		/* ── Page Styles & UI Host (Shadow DOM isolates DSH styles) ── */
 		let pageStyle = null;
 		function ensureStyle() {
 			if (pageStyle && pageStyle.isConnected) return pageStyle;
@@ -112,7 +112,7 @@ window.__ModuleLoader__.load({
 			shadow = host.attachShadow({ mode: "open" });
 			shadow.innerHTML = `
 			<style>
-				* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+				* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 				.toolbar { position: fixed; display: flex; align-items: center; gap: 6px; background: #fff; border-radius: 22px;
 					padding: 6px 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.05); animation: dshpop .12s ease; z-index: 2147483647; }
 				@keyframes dshpop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -179,7 +179,7 @@ window.__ModuleLoader__.load({
 			(document.body || document.documentElement).appendChild(host);
 		}
 
-		/* ── 小型 DOM 工具 ─────────────────────────────────────── */
+		/* ── DOM Utilities ─────────────────────────────────────── */
 		const svg = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 		const ICONS = {
 			palette: `<svg viewBox="0 0 24 24" width="15" height="15"><rect x="3" y="9" width="8" height="8" rx="1.5" fill="${COLORS.yellow}" stroke="#888" stroke-width="1"/><rect x="8" y="6" width="8" height="8" rx="1.5" fill="${COLORS.teal}" stroke="#888" stroke-width="1"/><rect x="13" y="10" width="8" height="8" rx="1.5" fill="${COLORS.red}" stroke="#888" stroke-width="1"/></svg>`,
@@ -227,7 +227,7 @@ window.__ModuleLoader__.load({
 			later(() => t.remove(), 1200);
 		}
 
-		/* ── 选区包装 / 还原 ───────────────────────────────────── */
+		/* ── Selection Wrapping / Unwrapping ──────────────────── */
 		function textNodesIn(range) {
 			const nodes = [];
 			const root = range.commonAncestorContainer.nodeType === 1
@@ -287,7 +287,7 @@ window.__ModuleLoader__.load({
 			return !!(node && node.closest && node.closest("input, textarea, select, [contenteditable]"));
 		}
 
-		/* ── 重锚定：全文索引 + 文本/上下文匹配 ────────────────── */
+		/* ── Re-anchoring: Full-text indexing + text/context matching ── */
 		function buildTextIndex() {
 			const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
 				acceptNode(n) {
@@ -346,12 +346,12 @@ window.__ModuleLoader__.load({
 				if (document.querySelector(`span.${CLASS}[${ID_ATTR}="${rec.id}"]`)) continue;
 				const range = locateText(index, rec);
 				if (range) {
-					try { wrapRange(range, rec.id, rec.color); } catch (e) { /* 跳过无法包装的片段 */ }
+					try { wrapRange(range, rec.id, rec.color); } catch (e) { /* Skip snippets that cannot be wrapped */ }
 				}
 			}
 		}
 
-		/* ── 右侧圆标条（按文档位置排列 + 内容高度比例定位） ──── */
+		/* ── Right-side Dot Rail (ordered by doc position + height mapping) ── */
 		function findScrollContainer() {
 			const sample = document.querySelector(`span.${CLASS}`) || document.body;
 			let el = sample.parentElement;
@@ -376,7 +376,7 @@ window.__ModuleLoader__.load({
 			}
 			railEl.style.display = "flex";
 
-			// 每条记录只取第一个 span，按文档顺序（上 -> 下）排序
+			// Take only the first span per record, sort in document order (top -> bottom)
 			const first = new Map();
 			spans.forEach((span) => {
 				const id = span.getAttribute(ID_ATTR);
@@ -387,14 +387,14 @@ window.__ModuleLoader__.load({
 				(a[1].compareDocumentPosition(b[1]) & Node.DOCUMENT_POSITION_FOLLOWING) ? 1 : -1
 			);
 
-			// 纵向位置 = 高亮在滚动内容中的比例位置（随内容高度映射）
+			// Vertical position = proportional position of highlight in scroll content
 			let sc = null, contentTop = 0, height = 1;
 			try {
 				sc = findScrollContainer();
 				const scRect = sc.getBoundingClientRect();
 				contentTop = scRect.top - sc.scrollTop;
 				height = sc.scrollHeight || 1;
-			} catch (e) { /* 布局读取失败时退化为均分 */ }
+			} catch (e) { /* Fallback to even distribution if layout read fails */ }
 
 			railEl.innerHTML = "";
 			dotMap.clear();
@@ -427,7 +427,7 @@ window.__ModuleLoader__.load({
 		let buildTimer = null;
 		function scheduleRail() {
 			clearTimeout(buildTimer);
-			buildTimer = setTimeout(() => { try { buildRail(); } catch (e) { /* 布局抖动时跳过本次重建 */ } }, 30);
+			buildTimer = setTimeout(() => { try { buildRail(); } catch (e) { /* Skip rebuild during layout jitter */ } }, 30);
 		}
 
 		function jumpToHighlight(id) {
@@ -438,20 +438,20 @@ window.__ModuleLoader__.load({
 			const spanRect = span.getBoundingClientRect();
 			const target = sc.scrollTop + (spanRect.top - scRect.top) - sc.clientHeight / 2 + spanRect.height / 2;
 			sc.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-			// 闪烁对应高亮，方便定位
+			// Flash corresponding highlight to indicate location
 			try {
 				span.style.boxShadow = "0 0 0 3px rgba(80,140,255,.55)";
 				later(() => { span.style.boxShadow = ""; }, 700);
-			} catch (e) { /* 忽略 */ }
+			} catch (e) { /* Ignore */ }
 			const dot = dotMap.get(id);
 			if (dot) {
 				dot.classList.remove("dsh-flash");
-				void dot.offsetWidth; // 重启动画
+				void dot.offsetWidth; // Restart animation
 				dot.classList.add("dsh-flash");
 			}
 		}
 
-		/* ── 工具栏 / 弹层 ─────────────────────────────────────── */
+		/* ── Toolbars / Popups ─────────────────────────────────── */
 		function makeDot(color, onClick) {
 			return h("button", { class: "dot", style: `background:${COLORS[color]}`, title: COLOR_NAMES[color] || color, onclick: onClick });
 		}
@@ -469,18 +469,18 @@ window.__ModuleLoader__.load({
 			if (!rect || (rect.width === 0 && rect.height === 0)) return;
 			const bar = h("div", { class: "toolbar" });
 			QUICK.forEach((c) => bar.appendChild(makeDot(c, () => applyNew(range, selText, c))));
-			bar.appendChild(makeIcon("palette", "更多颜色", () => {
+			bar.appendChild(makeIcon("palette", "More colors", () => {
 				hideUI(); ensureHost();
 				const pop = h("div", { class: "popup palette" });
 				Object.keys(COLORS).forEach((c) => pop.appendChild(makeDot(c, () => applyNew(range, selText, c))));
 				placeFixed(pop, rect, true);
 			}));
 			bar.appendChild(h("span", { class: "sep" }));
-			bar.appendChild(makeIcon("tag", "标签", () => {
+			bar.appendChild(makeIcon("tag", "Tag", () => {
 				const id = applyNew(range, selText, DEFAULT_COLOR);
 				if (id) later(() => openTagPopup(id, getHlRect(id)), 30);
 			}));
-			bar.appendChild(makeIcon("copy", "复制", () => copyText(selText, rect)));
+			bar.appendChild(makeIcon("copy", "Copy", () => copyText(selText, rect)));
 			placeFixed(bar, rect, true);
 		}
 		function applyNew(range, text, color) {
@@ -503,7 +503,7 @@ window.__ModuleLoader__.load({
 			hideUI(); ensureHost();
 			const rect = getHlRect(id);
 			const bar = h("div", { class: "toolbar" });
-			bar.appendChild(makeIcon("palette", "更换颜色", () => {
+			bar.appendChild(makeIcon("palette", "Change color", () => {
 				hideUI(); ensureHost();
 				const pop = h("div", { class: "popup palette" });
 				Object.keys(COLORS).forEach((c) => pop.appendChild(makeDot(c, () => {
@@ -515,11 +515,11 @@ window.__ModuleLoader__.load({
 				})));
 				placeFixed(pop, rect, true);
 			}));
-			bar.appendChild(makeIcon("note", "写想法", () => openNotePopup(id, rect)));
-			bar.appendChild(makeIcon("tag", "标签", () => openTagPopup(id, rect)));
+			bar.appendChild(makeIcon("note", "Add note", () => openNotePopup(id, rect)));
+			bar.appendChild(makeIcon("tag", "Tag", () => openTagPopup(id, rect)));
 			bar.appendChild(h("span", { class: "sep" }));
-			bar.appendChild(makeIcon("copy", "复制", () => copyText(rec.text, rect)));
-			bar.appendChild(makeIcon("trash", "删除高亮", () => {
+			bar.appendChild(makeIcon("copy", "Copy", () => copyText(rec.text, rect)));
+			bar.appendChild(makeIcon("trash", "Delete highlight", () => {
 				unwrap(id);
 				store.delete(id);
 				save(); hideUI(); scheduleRail();
@@ -530,7 +530,7 @@ window.__ModuleLoader__.load({
 			hideUI(); ensureHost();
 			const rec = store.get(id);
 			if (!rec) return;
-			const area = h("textarea", { class: "note-area", placeholder: "写想法" });
+			const area = h("textarea", { class: "note-area", placeholder: "Write a note..." });
 			area.value = rec.note || "";
 			const saveNote = () => {
 				rec.note = area.value.trim();
@@ -543,12 +543,12 @@ window.__ModuleLoader__.load({
 			});
 			const pop = h("div", { class: "popup note-card" }, [
 				h("div", { class: "note-head" }, [
-					h("span", { class: "note-title" }, [document.createTextNode("写想法")]),
+					h("span", { class: "note-title" }, [document.createTextNode("Note")]),
 					h("button", { class: "note-close", html: ICONS.close, onclick: hideUI })
 				]),
 				area,
 				h("div", { class: "note-foot" }, [
-					h("button", { class: "send", title: "保存", html: ICONS.send, onclick: saveNote })
+					h("button", { class: "send", title: "Save", html: ICONS.send, onclick: saveNote })
 				])
 			]);
 			placeFixed(pop, rect, false);
@@ -558,14 +558,14 @@ window.__ModuleLoader__.load({
 			hideUI(); ensureHost();
 			const rec = store.get(id);
 			if (!rec) return;
-			const input = h("input", { class: "tag-input", placeholder: "输入标签，用空格/逗号分隔", type: "text" });
+			const input = h("input", { class: "tag-input", placeholder: "Enter tags, separated by space or comma", type: "text" });
 			const chipsRow = h("div", { class: "tag-chips" });
 			const renderChips = () => {
 				chipsRow.innerHTML = "";
 				(rec.tags || []).forEach((t) => {
 					chipsRow.appendChild(h("span", { class: "chip" }, [
 						document.createTextNode("#" + t),
-						h("button", { class: "chip-x", title: "删除标签", onclick: () => {
+						h("button", { class: "chip-x", title: "Remove tag", onclick: () => {
 							rec.tags = rec.tags.filter((x) => x !== t);
 							save(); renderChips();
 						} }, [document.createTextNode("×")])
@@ -576,7 +576,7 @@ window.__ModuleLoader__.load({
 				const v = input.value.trim().replace(/^#/, "");
 				if (v) {
 					rec.tags = rec.tags || [];
-					v.split(/[,，\s]+/).filter(Boolean).forEach((t) => {
+					v.split(/[,;\s\uFF0C]+/).filter(Boolean).forEach((t) => {
 						if (!rec.tags.includes(t)) rec.tags.push(t);
 					});
 					save();
@@ -592,8 +592,8 @@ window.__ModuleLoader__.load({
 				input,
 				chipsRow,
 				h("div", { class: "tag-foot" }, [
-					h("button", { class: "btn btn-cancel", onclick: hideUI }, [document.createTextNode("取消")]),
-					h("button", { class: "btn btn-ok", onclick: saveTag }, [document.createTextNode("保存")])
+					h("button", { class: "btn btn-cancel", onclick: hideUI }, [document.createTextNode("Cancel")]),
+					h("button", { class: "btn btn-ok", onclick: saveTag }, [document.createTextNode("Save")])
 				])
 			]);
 			placeFixed(pop, rect, false);
@@ -601,7 +601,7 @@ window.__ModuleLoader__.load({
 			later(() => input.focus(), 30);
 		}
 		function copyText(text, rect) {
-			const done = () => { hideUI(); toast("已复制", rect); };
+			const done = () => { hideUI(); toast("Copied", rect); };
 			if (navigator.clipboard && navigator.clipboard.writeText) {
 				navigator.clipboard.writeText(text).then(done).catch(() => { fallbackCopy(text); done(); });
 			} else { fallbackCopy(text); done(); }
@@ -612,11 +612,11 @@ window.__ModuleLoader__.load({
 			ta.style.cssText = "position:fixed;opacity:0;";
 			document.body.appendChild(ta);
 			ta.select();
-			try { document.execCommand("copy"); } catch (e) { /* 忽略 */ }
+			try { document.execCommand("copy"); } catch (e) { /* Ignore */ }
 			ta.remove();
 		}
 
-		/* ── 悬停提示（想法 + 标签） ───────────────────────────── */
+		/* ── Hover Tooltip (Notes & Tags) ─────────────────────── */
 		let tipEl = null, tipTimer = null;
 		function showTip(id, rect) {
 			const rec = store.get(id);
@@ -639,7 +639,7 @@ window.__ModuleLoader__.load({
 			if (tipEl) { tipEl.remove(); tipEl = null; }
 		}
 
-		/* ── 页面事件（capture 阶段，避免被页面 stopPropagation 拦截） ── */
+		/* ── Page Events (Capture phase to avoid page stopPropagation) ── */
 		const onMouseUp = (e) => {
 			if (host && host.contains(e.target)) return;
 			later(() => {
@@ -687,18 +687,18 @@ window.__ModuleLoader__.load({
 		window.addEventListener("scroll", onScroll, true);
 		window.addEventListener("resize", onResize);
 
-		/* ── MutationObserver：对抗 React 重渲染，重新锚定 ────── */
+		/* ── MutationObserver: Re-anchoring against React re-renders ── */
 		let anchorTimer = null;
 		function scheduleAnchor() {
 			clearTimeout(anchorTimer);
 			anchorTimer = setTimeout(() => {
-				try { anchorAll(); scheduleRail(); } catch (e) { /* 忽略瞬时 DOM 状态 */ }
+				try { anchorAll(); scheduleRail(); } catch (e) { /* Ignore transient DOM states */ }
 			}, 700);
 		}
 		const mo = new MutationObserver(() => scheduleAnchor());
 		let observerStarted = false;
 
-		/* ── 只读运行诊断（供验证脚本使用） ───────────────────── */
+		/* ── Read-only Runtime Diagnostics (for validation scripts) ── */
 		window.__dshHighlighterDiagnostics = Object.freeze({
 			version: INSTANCE_VERSION,
 			health() {
@@ -762,7 +762,7 @@ window.__ModuleLoader__.load({
 			}
 		});
 
-		/* ── 启动 ─────────────────────────────────────────────── */
+		/* ── Initialization ───────────────────────────────────── */
 		function boot() {
 			if (!document.body) {
 				later(boot, 300);
